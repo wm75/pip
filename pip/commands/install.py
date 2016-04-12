@@ -361,9 +361,7 @@ class InstallCommand(RequirementCommand):
         if options.target_dir:
             ensure_dir(options.target_dir)
 
-            lib_dir = distutils_scheme('', home=temp_target_dir)['purelib']
-
-            for item in os.listdir(lib_dir):
+            for lib_dir, item in walk_lib_dirs(possible_lib_locations):
                 target_item_dir = os.path.join(options.target_dir, item)
                 if os.path.exists(target_item_dir):
                     if not options.upgrade:
@@ -398,3 +396,19 @@ class InstallCommand(RequirementCommand):
 def get_lib_location_guesses(*args, **kwargs):
     scheme = distutils_scheme('', *args, **kwargs)
     return [scheme['purelib'], scheme['platlib']]
+
+
+def walk_lib_dirs(lib_locations):
+    items = None
+    for lib_dir in set(lib_locations):
+        try:
+            items = os.listdir(lib_dir)
+        except OSError:
+            continue
+        for item in items:
+            yield lib_dir, item
+    if items is None:
+        raise InstallationError(
+            'Failed to migrate installation to target directory.'
+            'Could not find temporary installation files.'
+        )
